@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>雅思生词本</title>
+  <style>
+    :root {
+      --bg: #f5f6f8; --card: #fff; --text: #1f2937; --muted: #8a94a6;
+      --accent: #4f46e5; --accent-soft: #eef2ff; --green: #059669;
+      --green-soft: #ecfdf5; --border: #e6e8ee; --shadow: 0 1px 2px rgba(16,24,40,.06);
+      --star: #f59e0b; --star-off: #d7dbe3;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.6; padding-bottom: 40px; }
+    header { background: var(--card); border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 30; box-shadow: var(--shadow); }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+    .head-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 0; }
+    h1 { font-size: 19px; font-weight: 700; }
+    nav { display: flex; gap: 6px; margin-left: auto; }
+    .tab { border: 1px solid var(--border); background: #fff; color: var(--muted);
+      padding: 6px 14px; border-radius: 999px; cursor: pointer; font-size: 13px; }
+    .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+    main { padding-top: 18px; }
+
+    .hint { font-size: 12px; color: var(--muted); margin: 2px 0 12px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+    .cell { background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 10px 8px 8px; cursor: pointer; text-align: center; user-select: none;
+      transition: transform .06s ease, box-shadow .12s ease; box-shadow: var(--shadow); }
+    .cell:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(16,24,40,.10); }
+    .cell .w { font-size: 14px; font-weight: 600; word-break: break-word; line-height: 1.25; }
+    .cell .stars { font-size: 9px; letter-spacing: 1px; color: var(--star); margin-top: 5px;
+      white-space: nowrap; }
+    .cell .stars .off { color: var(--star-off); }
+    .cell.archived { background: #f0f1f4; border-color: #e3e5ea; opacity: .62; }
+    .cell.archived .w { color: #9aa2b1; }
+    .cell.archived:hover { transform: none; box-shadow: var(--shadow); }
+    .cell.locked { cursor: not-allowed; }
+
+    .search-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; position: sticky;
+      top: 64px; background: var(--bg); padding: 8px 0; z-index: 20; }
+    .search-bar input { flex: 1; max-width: 420px; border: 1px solid var(--border); border-radius: 10px;
+      padding: 9px 12px; font-size: 14px; outline: none; }
+    .search-bar input:focus { border-color: var(--accent); }
+
+    .search-layout { display: flex; gap: 14px; align-items: flex-start; }
+    .search-main { flex: 1; min-width: 0; }
+    .alpha { position: sticky; top: 120px; display: flex; flex-direction: column; gap: 1px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 4px 3px; }
+    .alpha button { border: none; background: none; color: var(--muted); font-size: 11px; cursor: pointer;
+      width: 24px; height: 20px; border-radius: 5px; }
+    .alpha button:hover { background: var(--accent-soft); color: var(--accent); }
+    .group { margin-bottom: 18px; }
+    .group h2 { font-size: 14px; color: var(--accent); margin: 0 0 8px 2px; }
+
+    .empty { color: #a9b0bd; text-align: center; padding: 56px 0; font-size: 14px; }
+
+    .sent { background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      box-shadow: var(--shadow); padding: 18px 20px; margin-bottom: 14px; }
+    .sent .orig { font-size: 15px; font-weight: 600; line-height: 1.55; }
+    .sent .trans { margin-top: 8px; color: var(--muted); font-size: 14px; }
+    .sent h4 { font-size: 11px; color: var(--accent); margin: 13px 0 4px; text-transform: uppercase;
+      letter-spacing: .5px; }
+    .sent .main { font-size: 13px; color: var(--text); }
+    .sent ul { padding-left: 20px; font-size: 13px; color: var(--muted); }
+    .sent li { margin: 3px 0; }
+
+    .modal-mask { position: fixed; inset: 0; background: rgba(15,23,42,.42); z-index: 50;
+      display: none; align-items: center; justify-content: center; padding: 20px; }
+    .modal-mask.show { display: flex; }
+    .modal { background: var(--card); border-radius: 16px; max-width: 520px; width: 100%;
+      max-height: 88vh; overflow: auto; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,.2); }
+    .modal .head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .modal .mw { font-size: 24px; font-weight: 800; }
+    .modal .mp { color: var(--muted); font-size: 15px; }
+    .modal .tag { display: inline-block; background: var(--accent-soft); color: var(--accent);
+      border-radius: 6px; padding: 1px 8px; font-size: 12px; }
+    .modal .phrase { background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412;
+      border-radius: 10px; padding: 8px 12px; margin-top: 10px; font-size: 14px; }
+    .modal h4 { font-size: 11px; color: var(--muted); margin: 14px 0 3px; text-transform: uppercase;
+      letter-spacing: .5px; }
+    .modal .en { color: var(--accent); font-style: italic; font-size: 14px; }
+    .modal .cn { color: var(--muted); font-size: 13px; }
+    .chip { display: inline-block; background: var(--green-soft); color: var(--green);
+      border-radius: 999px; padding: 1px 8px; font-size: 12px; margin: 2px 3px 2px 0; }
+    .star-picker { display: flex; gap: 4px; margin-top: 14px; align-items: center; }
+    .star-picker button { border: none; background: none; font-size: 22px; cursor: pointer; color: var(--star-off); }
+    .star-picker button.on { color: var(--star); }
+    .star-picker .lab { font-size: 12px; color: var(--muted); margin-right: 4px; }
+    .modal .actions { display: flex; gap: 10px; margin-top: 18px; }
+    .btn { flex: 1; border: 1px solid var(--border); background: #fff; border-radius: 10px;
+      padding: 10px 0; cursor: pointer; font-size: 14px; }
+    .btn.primary { background: var(--green); border-color: var(--green); color: #fff; }
+    .btn.ghost { background: #fff; color: var(--muted); }
+    .modal-close { float: right; border: none; background: none; font-size: 22px; color: var(--muted);
+      cursor: pointer; line-height: 1; }
+
+    .ctx { position: fixed; z-index: 60; background: #fff; border: 1px solid var(--border);
+      border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.16); padding: 5px; display: none; }
+    .ctx button { display: block; width: 100%; border: none; background: none; text-align: left;
+      padding: 8px 14px; font-size: 13px; cursor: pointer; border-radius: 6px; color: var(--text); }
+    .ctx button:hover { background: var(--accent-soft); }
+    @media (max-width: 560px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap head-row">
+      <h1>📖 雅思生词本</h1>
+      <nav>
+        <button class="tab active" data-mode="memorize">记忆模式</button>
+        <button class="tab" data-mode="review">复习模式</button>
+        <button class="tab" data-mode="search">检索模式</button>
+        <button class="tab" data-mode="sentences">长难句</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="search-bar" id="searchBar" style="display:none;">
+      <input id="searchInput" type="text" placeholder="输入单词进行检索…" />
+    </div>
+    <div class="search-layout" id="searchLayout" style="display:none;">
+      <div class="search-main" id="searchMain"></div>
+      <div class="alpha" id="alpha"></div>
+    </div>
+    <div id="simplePanel">
+      <div class="hint" id="modeHint"></div>
+      <div class="grid" id="grid"></div>
+    </div>
+    <div id="sentPanel" style="display:none;">
+      <div class="hint">文章长难句 · 含上下文翻译与结构简析</div>
+      <div id="sentList"></div>
+    </div>
+  </main>
+
+  <div class="modal-mask" id="mask">
+    <div class="modal" id="modal"></div>
+  </div>
+  <div class="ctx" id="ctx">
+    <button id="ctxUnarchive">移回学习中（未背）</button>
+    <button id="ctxDelete" style="color:#dc2626;">删除该单词</button>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="sync.js"></script>
+  <script>
+    const DATA = window.IELTS_DATA;
+    const LS_KEY = "ielts_state_v1";
+    const LS_DEL = "ielts_deleted_v1";
+    const LS_TS = "ielts_ts_v1";
+    let mode = "memorize";
+    let query = "";
+    let ctxWord = null;
+
+    function nowMs() { return Date.now(); }
+
+    function loadState() {
+      let saved = {};
+      try { saved = JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch (e) {}
+      DATA.vocab.forEach(v => {
+        if (!saved[v.word]) saved[v.word] = { stars: v.stars || 0, archived: !!v.archived };
+      });
+      return saved;
+    }
+    let state = loadState();
+    let deleted = new Set(JSON.parse(localStorage.getItem(LS_DEL) || "[]"));
+    let tsMap = {};
+    try { tsMap = JSON.parse(localStorage.getItem(LS_TS) || "{}"); } catch (e) {}
+
+    function persistLocal() {
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+      localStorage.setItem(LS_DEL, JSON.stringify([...deleted]));
+      localStorage.setItem(LS_TS, JSON.stringify(tsMap));
+    }
+
+    function commit(word, patch) {
+      const cur = state[word] || { stars: 0, archived: false };
+      const next = Object.assign({}, cur, patch);
+      state[word] = next;
+      if (patch.deleted === true) deleted.add(word);
+      else if (patch.deleted === false) deleted.delete(word);
+      const t = nowMs();
+      tsMap[word] = t;
+      persistLocal();
+      VocabSync.push(word, next.stars || 0, !!next.archived, deleted.has(word), t);
+    }
+
+    function getSt(word) { return state[word] || { stars: 0, archived: false }; }
+    function withState(v) { return Object.assign({}, v, getSt(v.word)); }
+
+    async function initSync() {
+      const ok = await VocabSync.init();
+      if (!ok) return;
+      const remote = await VocabSync.fetchAll();
+      if (!remote) return;
+      const words = new Set([...DATA.vocab.map(v => v.word), ...Object.keys(remote), ...Object.keys(state)]);
+      for (const w of words) {
+        const r = remote[w];
+        const local = state[w] || { stars: 0, archived: false };
+        const localDeleted = deleted.has(w);
+        const localTs = tsMap[w] || 0;
+        const rTs = r && r.updated_at ? new Date(r.updated_at).getTime() : 0;
+        const localEdited = localTs > 0 || (local.stars || 0) > 0 || local.archived || localDeleted;
+        if (!r) {
+          if (localEdited) {
+            const t = localTs || nowMs();
+            VocabSync.push(w, local.stars || 0, !!local.archived, localDeleted, t);
+            tsMap[w] = t;
+          }
+        } else if (!localEdited || rTs >= localTs) {
+          state[w] = { stars: r.stars || 0, archived: !!r.archived };
+          if (r.deleted) deleted.add(w); else deleted.delete(w);
+          tsMap[w] = rTs;
+        } else {
+          VocabSync.push(w, local.stars || 0, !!local.archived, localDeleted, localTs);
+        }
+      }
+      persistLocal();
+      render();
+    }
+
+    function starIcons(n, off) {
+      let s = "";
+      for (let i = 1; i <= 5; i++) s += i <= n ? "★" : "<span class='off'>★</span>";
+      return s;
+    }
+
+    function sortedVocab() {
+      const vs = DATA.vocab.map(withState).filter(v => !deleted.has(v.word));
+      if (mode === "memorize") return vs.slice().sort((a, b) => a.order - b.order);
+      if (mode === "review")
+        return vs.filter(v => v.archived)
+          .sort((a, b) => b.stars - a.stars || a.word.localeCompare(b.word));
+      const q = query.trim().toLowerCase();
+      return vs.filter(v => !q || v.word.toLowerCase().includes(q))
+        .sort((a, b) => a.word.localeCompare(b.word));
+    }
+
+    function cellHtml(v, locked) {
+      const cls = "cell" + (locked ? " archived locked" : "");
+      return `<div class="${cls}" data-word="${v.word}">
+        <div class="w">${v.word}</div>
+        <div class="stars">${starIcons(v.stars)}</div>
+      </div>`;
+    }
+
+    function renderSimple() {
+      const grid = document.getElementById("grid");
+      const hint = document.getElementById("modeHint");
+      const list = sortedVocab();
+      hint.textContent = mode === "memorize"
+        ? "按学习时间顺序排列 · 灰色为已背单词（不可查看） · 点击卡片查看详情"
+        : "已背单词 · 按星级从高到低排列，同星级按字母顺序 · 点击可查看或调整星级";
+      if (!list.length) { grid.innerHTML = '<div class="empty">这里还没有单词。</div>'; return; }
+      grid.innerHTML = list.map(v => cellHtml(v, mode === "memorize" && v.archived)).join("");
+    }
+
+    function renderSearch() {
+      const main = document.getElementById("searchMain");
+      const alpha = document.getElementById("alpha");
+      const list = sortedVocab();
+      if (!list.length) { main.innerHTML = '<div class="empty">没有匹配的单词。</div>'; alpha.innerHTML = ""; return; }
+      const groups = {};
+      list.forEach(v => {
+        const k = /^[a-zA-Z]/.test(v.word) ? v.word[0].toUpperCase() : "#";
+        (groups[k] = groups[k] || []).push(v);
+      });
+      main.innerHTML = Object.keys(groups).sort((a, b) =>
+        (a === "#" ? 1 : b === "#" ? -1 : a.localeCompare(b))).map(k =>
+        `<div class="group" id="grp-${k}"><h2>${k}</h2>
+          <div class="grid">${groups[k].map(v => cellHtml(v, false)).join("")}</div></div>`).join("");
+      alpha.innerHTML = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map(c =>
+        `<button data-letter="${c}">${c}</button>`).join("");
+    }
+
+    function render() {
+      const isSearch = mode === "search";
+      const isSent = mode === "sentences";
+      document.getElementById("searchBar").style.display = isSearch ? "" : "none";
+      document.getElementById("searchLayout").style.display = isSearch ? "" : "none";
+      document.getElementById("simplePanel").style.display = (isSearch || isSent) ? "none" : "";
+      document.getElementById("sentPanel").style.display = isSent ? "" : "none";
+      document.querySelectorAll(".tab").forEach(t =>
+        t.classList.toggle("active", t.dataset.mode === mode));
+      if (isSearch) renderSearch();
+      else if (isSent) renderSentences();
+      else renderSimple();
+    }
+
+    function renderSentences() {
+      const box = document.getElementById("sentList");
+      if (!DATA.sentences.length) { box.innerHTML = '<div class="empty">还没有长难句。</div>'; return; }
+      box.innerHTML = DATA.sentences.map(s => `
+        <div class="sent">
+          <div class="orig">${s.original}</div>
+          <div class="trans">📝 ${s.translation}</div>
+          <h4>结构简析</h4>
+          <div class="main">${s.main}</div>
+          <ul>${s.clauses.map(c => `<li>${c}</li>`).join("")}</ul>
+        </div>`).join("");
+    }
+
+    function openModal(word) {
+      const v = withState(DATA.vocab.find(x => x.word === word));
+      const modal = document.getElementById("modal");
+      modal.innerHTML = `
+        <button class="modal-close" id="closeBtn">×</button>
+        <div class="head"><span class="mw">${v.word}</span><span class="mp">${v.phonetic}</span>
+          <span class="tag">${v.pos}</span></div>
+        ${v.phrase ? `<div class="phrase">📎 常用短语：<b>${v.phrase}</b></div>` : ""}
+        <h4>英文释义</h4><div class="en">${v.defEn}</div>
+        <h4>中文释义</h4><div>${v.meanings.join("；")}</div>
+        <h4>用法</h4><div>${v.usage}</div>
+        <h4>例句</h4><div class="en">${v.example}</div><div class="cn">${v.exampleCn}</div>
+        <h4>词根词缀</h4>
+        ${v.prefix ? `<div><b>前缀</b>：${v.prefix}</div>` : ""}
+        <div><b>词根</b>：${v.root}</div>
+        ${v.suffix ? `<div><b>后缀</b>：${v.suffix}</div>` : ""}
+        ${v.synonyms.length ? `<h4>近义词</h4><div>${v.synonyms.map(s => `<span class="chip">${s}</span>`).join("")}</div>` : ""}
+        ${v.derivatives.length ? `<h4>衍生词</h4><div>${v.derivatives.join("；")}</div>` : ""}
+        <div class="star-picker">
+          <span class="lab">我的星级：</span>
+          ${[1,2,3,4,5].map(i => `<button data-star="${i}" class="${i <= v.stars ? 'on' : ''}">★</button>`).join("")}
+          <span style="font-size:12px;color:var(--muted)">${v.stars} 星（点同一颗星可清零）</span>
+        </div>
+        ${(mode === "memorize" && !v.archived)
+          ? `<div class="actions"><button class="btn primary" id="actDone">归档到已背</button></div>`
+          : ""}`;
+      document.getElementById("mask").classList.add("show");
+      modal.dataset.word = word;
+
+      document.getElementById("closeBtn").onclick = closeModal;
+      modal.querySelectorAll(".star-picker button").forEach(b => b.onclick = () => {
+        const n = +b.dataset.star;
+        const cur = getSt(word).stars;
+        commit(word, { stars: (cur === n) ? 0 : n });
+        render(); openModal(word);
+      });
+      const done = document.getElementById("actDone");
+      if (done) done.onclick = () => { commit(word, { archived: true }); closeModal(); };
+    }
+    function closeModal() {
+      document.getElementById("mask").classList.remove("show");
+      render();
+    }
+
+    document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+      mode = t.dataset.mode; render();
+    }));
+
+    document.getElementById("grid").addEventListener("click", e => {
+      const cell = e.target.closest(".cell");
+      if (!cell) return;
+      const word = cell.dataset.word;
+      const v = withState(DATA.vocab.find(x => x.word === word));
+      if (mode === "memorize" && v.archived) return;   // 已背不可查看
+      openModal(word);
+    });
+
+    document.getElementById("searchMain").addEventListener("click", e => {
+      const cell = e.target.closest(".cell");
+      if (cell) openModal(cell.dataset.word);
+    });
+    document.getElementById("alpha").addEventListener("click", e => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      const el = document.getElementById("grp-" + b.dataset.letter);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    document.getElementById("searchInput").addEventListener("input", e => {
+      query = e.target.value; renderSearch();
+    });
+
+    // 检索模式右键：所有单词可删除；已背单词可改回未背
+    document.getElementById("searchMain").addEventListener("contextmenu", e => {
+      const cell = e.target.closest(".cell");
+      if (!cell) return;
+      const word = cell.dataset.word;
+      const v = withState(DATA.vocab.find(x => x.word === word));
+      e.preventDefault();
+      ctxWord = word;
+      document.getElementById("ctxUnarchive").style.display = v.archived ? "" : "none";
+      const ctx = document.getElementById("ctx");
+      ctx.style.display = "block";
+      ctx.style.left = Math.min(e.clientX, window.innerWidth - 140) + "px";
+      ctx.style.top = Math.min(e.clientY, window.innerHeight - 80) + "px";
+    });
+    document.getElementById("ctxUnarchive").onclick = () => {
+      if (ctxWord) { commit(ctxWord, { archived: false }); ctxWord = null; }
+      document.getElementById("ctx").style.display = "none";
+      render();
+    };
+    document.getElementById("ctxDelete").onclick = () => {
+      if (ctxWord) {
+        commit(ctxWord, { deleted: true });
+        ctxWord = null;
+      }
+      document.getElementById("ctx").style.display = "none";
+      render();
+    };
+    document.addEventListener("click", e => {
+      if (!e.target.closest("#ctx")) document.getElementById("ctx").style.display = "none";
+    });
+    document.getElementById("mask").addEventListener("click", e => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+
+    render();
+    initSync();
+  </script>
+</body>
+</html>
