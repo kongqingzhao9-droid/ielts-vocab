@@ -145,10 +145,16 @@
     <button id="ctxDelete" style="color:#dc2626;">删除该单词</button>
   </div>
 
-  <script src="data.js"></script>
+  <script src="data.js?v=1"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="sync.js"></script>
+  <script>
+    // 手机/托管环境下注册 service worker，让词库更新即时生效；本地双击 file:// 时跳过
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
   <script>
     const DATA = window.IELTS_DATA;
     const LS_KEY = "ielts_state_v1";
