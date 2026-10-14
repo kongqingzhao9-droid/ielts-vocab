@@ -2651,7 +2651,17 @@ window.IELTS_DATA = {
       prefix: "indi-（在内）", root: "gen（=birth 出生）", suffix: "-ous（形容词）",
       synonyms: ["native", "aboriginal", "local"],
       derivatives: ["indigenous adj. 本土的（无常见衍生）"],
-      phrase: null, stars: 0, archived: false, order: 265 }
+      phrase: null, stars: 0, archived: false, order: 265 },
+    { word: "brutality", phonetic: "/bruːˈtæləti/", pos: "n.",
+      defEn: "extreme violence or cruel, savage treatment",
+      meanings: ["残暴", "暴行", "野蛮行为"],
+      usage: "不可数名词时表“残暴”性质，可数名词时指具体的“暴行”",
+      example: "The report documented the brutality of the regime against its own citizens.",
+      exampleCn: "这份报告记录了该政权对其本国公民的残暴行径。",
+      prefix: null, root: "brut（=brute 野兽，源自拉丁语 brutus 粗野的）", suffix: "-ality（名词后缀，表性质或状态）",
+      synonyms: ["cruelty", "savagery", "violence", "barbarity"],
+      derivatives: ["brutal adj. 残忍的", "brutalize v. 使变得残忍", "brutally adv. 残忍地"],
+      phrase: null, stars: 0, archived: false, order: 266 }
   ],
   sentences: [
     {
