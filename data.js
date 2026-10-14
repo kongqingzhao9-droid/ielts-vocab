@@ -2731,7 +2731,17 @@ window.IELTS_DATA = {
       prefix: null, root: "aud（=hear 听，源自拉丁语 audire）", suffix: "-ible（=able 能够……的）",
       synonyms: ["perceptible", "distinct", "clear"],
       derivatives: ["audibly adv. 听得见地", "audibility n. 可听度", "inaudible adj. 听不见的", "audience n. 听众", "auditory adj. 听觉的"],
-      phrase: null, stars: 0, archived: false, order: 273 }
+      phrase: null, stars: 0, archived: false, order: 273 },
+    { word: "cosset", phonetic: "/ˈkɒsɪt/", pos: "v.",
+      defEn: "to treat someone with great care and attention, often too much; to pamper",
+      meanings: ["溺爱，宠爱", "娇养，悉心照料"],
+      usage: "及物动词，常含“过度呵护”之意",
+      example: "As an only child, she was cosseted by her grandparents and rarely heard the word 'no'.",
+      exampleCn: "作为独生女，她从小被祖父母溺爱，很少听到“不”字。",
+      prefix: null, root: "cosset（源自古英语 cot-sæta，屋里住的人 → 像养在屋里的小羊一样悉心呵护）", suffix: null,
+      synonyms: ["pamper", "indulge", "spoil", "mollycoddle"],
+      derivatives: ["cosseted adj. 被溺爱的", "cosseting n. 溺爱"],
+      phrase: null, stars: 0, archived: false, order: 274 }
   ],
   sentences: [
     {
