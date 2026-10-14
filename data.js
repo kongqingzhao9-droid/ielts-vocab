@@ -2721,7 +2721,17 @@ window.IELTS_DATA = {
       prefix: null, root: "awning（遮阳篷，词源不详，可能源自法语 auvent）", suffix: "-s（复数）",
       synonyms: ["canopy", "cover", "sunshade"],
       derivatives: ["awning n. 遮阳篷（单数）"],
-      phrase: null, stars: 0, archived: false, order: 272 }
+      phrase: null, stars: 0, archived: false, order: 272 },
+    { word: "audible", phonetic: "/ˈɔːdəbl/", pos: "adj.",
+      defEn: "able to be heard; loud enough to be heard",
+      meanings: ["听得见的", "可听见的"],
+      usage: "常与 barely / clearly / scarcely 连用；反义词 inaudible",
+      example: "The hum of the engine was barely audible from inside the cabin.",
+      exampleCn: "从客舱内部几乎听不到发动机的嗡嗡声。",
+      prefix: null, root: "aud（=hear 听，源自拉丁语 audire）", suffix: "-ible（=able 能够……的）",
+      synonyms: ["perceptible", "distinct", "clear"],
+      derivatives: ["audibly adv. 听得见地", "audibility n. 可听度", "inaudible adj. 听不见的", "audience n. 听众", "auditory adj. 听觉的"],
+      phrase: null, stars: 0, archived: false, order: 273 }
   ],
   sentences: [
     {
