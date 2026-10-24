@@ -6,23 +6,23 @@
   <title>雅思生词本</title>
   <style>
     :root {
-      --bg: #f5f6f8; --card: #fff; --text: #1f2937; --muted: #8a94a6;
-      --accent: #4f46e5; --accent-soft: #eef2ff; --green: #059669;
-      --green-soft: #ecfdf5; --border: #e6e8ee; --shadow: 0 1px 2px rgba(16,24,40,.06);
-      --star: #f59e0b; --star-off: #d7dbe3;
+      --bg: #0f1115; --card: #171a21; --text: #e8eaf0; --muted: #9aa3b2;
+      --accent: #7c8cf8; --accent-soft: #242a44; --green: #34d399;
+      --green-soft: #16281d; --border: #2a2f3a; --shadow: 0 1px 2px rgba(0,0,0,.45);
+      --star: #fbbf24; --star-off: #4a5262;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
-      background: var(--bg); color: var(--text); line-height: 1.6; padding-bottom: 40px; }
+      background: var(--bg); color: var(--text); line-height: 1.6; padding-bottom: 76px; }
     header { background: var(--card); border-bottom: 1px solid var(--border);
       position: sticky; top: 0; z-index: 30; box-shadow: var(--shadow); }
     .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
     .head-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 0; }
     h1 { font-size: 19px; font-weight: 700; }
     nav { display: flex; gap: 6px; margin-left: auto; }
-    .tab { border: 1px solid var(--border); background: #fff; color: var(--muted);
+    .tab { border: 1px solid var(--border); background: var(--card); color: var(--muted);
       padding: 6px 14px; border-radius: 999px; cursor: pointer; font-size: 13px; }
-    .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+    .tab.active { background: var(--accent); border-color: var(--accent); color: #10131a; font-weight: 600; }
     main { padding-top: 18px; }
 
     .hint { font-size: 12px; color: var(--muted); margin: 2px 0 12px; }
@@ -30,20 +30,20 @@
     .cell { background: var(--card); border: 1px solid var(--border); border-radius: 10px;
       padding: 10px 8px 8px; cursor: pointer; text-align: center; user-select: none;
       transition: transform .06s ease, box-shadow .12s ease; box-shadow: var(--shadow); }
-    .cell:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(16,24,40,.10); }
+    .cell:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,.45); }
     .cell .w { font-size: 14px; font-weight: 600; word-break: break-word; line-height: 1.25; }
     .cell .stars { font-size: 9px; letter-spacing: 1px; color: var(--star); margin-top: 5px;
       white-space: nowrap; }
     .cell .stars .off { color: var(--star-off); }
-    .cell.archived { background: #f0f1f4; border-color: #e3e5ea; opacity: .62; }
-    .cell.archived .w { color: #9aa2b1; }
+    .cell.archived { background: #12151a; border-color: #242933; opacity: .62; }
+    .cell.archived .w { color: #6b7280; }
     .cell.archived:hover { transform: none; box-shadow: var(--shadow); }
     .cell.locked { cursor: not-allowed; }
 
     .search-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; position: sticky;
       top: 64px; background: var(--bg); padding: 8px 0; z-index: 20; }
     .search-bar input { flex: 1; max-width: 420px; border: 1px solid var(--border); border-radius: 10px;
-      padding: 9px 12px; font-size: 14px; outline: none; }
+      padding: 9px 12px; font-size: 14px; outline: none; background: var(--card); color: var(--text); }
     .search-bar input:focus { border-color: var(--accent); }
 
     .search-layout { display: flex; gap: 14px; align-items: flex-start; }
@@ -56,7 +56,25 @@
     .group { margin-bottom: 18px; }
     .group h2 { font-size: 14px; color: var(--accent); margin: 0 0 8px 2px; }
 
-    .empty { color: #a9b0bd; text-align: center; padding: 56px 0; font-size: 14px; }
+    .empty { color: var(--muted); text-align: center; padding: 56px 0; font-size: 14px; }
+
+    .pager { position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
+      background: var(--card); border-top: 1px solid var(--border);
+      padding: 10px 20px; box-shadow: 0 -3px 12px rgba(0,0,0,.35); }
+    .pager-inner { max-width: 1180px; margin: 0 auto; display: flex; align-items: center; gap: 14px; }
+    .pager-slider { flex: 1; -webkit-appearance: none; appearance: none; height: 6px;
+      border-radius: 999px; background: var(--border); outline: none; cursor: pointer; }
+    .pager-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px;
+      border-radius: 50%; background: #fff; border: 2px solid var(--accent);
+      box-shadow: 0 1px 4px rgba(0,0,0,.4); cursor: pointer; }
+    .pager-slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%;
+      background: #fff; border: 2px solid var(--accent); cursor: pointer; }
+    .pager-input { display: flex; align-items: center; gap: 6px; font-size: 13px;
+      color: var(--muted); white-space: nowrap; }
+    .pager-input input { width: 58px; text-align: center; background: var(--bg);
+      color: var(--text); border: 1px solid var(--border); border-radius: 8px;
+      padding: 6px 8px; font-size: 14px; outline: none; }
+    .pager-input input:focus { border-color: var(--accent); }
 
     .sent { background: var(--card); border: 1px solid var(--border); border-radius: 14px;
       box-shadow: var(--shadow); padding: 18px 20px; margin-bottom: 14px; }
@@ -68,7 +86,7 @@
     .sent ul { padding-left: 20px; font-size: 13px; color: var(--muted); }
     .sent li { margin: 3px 0; }
 
-    .modal-mask { position: fixed; inset: 0; background: rgba(15,23,42,.42); z-index: 50;
+    .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.58); z-index: 50;
       display: none; align-items: center; justify-content: center; padding: 20px; }
     .modal-mask.show { display: flex; }
     .modal { background: var(--card); border-radius: 16px; max-width: 520px; width: 100%;
@@ -78,12 +96,17 @@
     .modal .mp { color: var(--muted); font-size: 15px; }
     .modal .tag { display: inline-block; background: var(--accent-soft); color: var(--accent);
       border-radius: 6px; padding: 1px 8px; font-size: 12px; }
-    .modal .phrase { background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412;
+    .modal .phrase { background: #2a2014; border: 1px solid #5c441f; color: #fbbf7b;
       border-radius: 10px; padding: 8px 12px; margin-top: 10px; font-size: 14px; }
     .modal h4 { font-size: 11px; color: var(--muted); margin: 14px 0 3px; text-transform: uppercase;
       letter-spacing: .5px; }
     .modal .en { color: var(--accent); font-style: italic; font-size: 14px; }
+    .modal .def-en { font-size: 18px; font-weight: 600; font-style: normal; }
     .modal .cn { color: var(--muted); font-size: 13px; }
+    .expand-btn { display: inline-block; border: 1px solid var(--border); background: var(--bg);
+      color: var(--muted); border-radius: 999px; padding: 1px 10px; font-size: 11px;
+      cursor: pointer; margin-left: 6px; vertical-align: middle; }
+    .expand-btn:hover { color: var(--accent); border-color: var(--accent); }
     .chip { display: inline-block; background: var(--green-soft); color: var(--green);
       border-radius: 999px; padding: 1px 8px; font-size: 12px; margin: 2px 3px 2px 0; }
     .star-picker { display: flex; gap: 4px; margin-top: 14px; align-items: center; }
@@ -91,14 +114,14 @@
     .star-picker button.on { color: var(--star); }
     .star-picker .lab { font-size: 12px; color: var(--muted); margin-right: 4px; }
     .modal .actions { display: flex; gap: 10px; margin-top: 18px; }
-    .btn { flex: 1; border: 1px solid var(--border); background: #fff; border-radius: 10px;
+    .btn { flex: 1; border: 1px solid var(--border); background: var(--card); border-radius: 10px;
       padding: 10px 0; cursor: pointer; font-size: 14px; }
-    .btn.primary { background: var(--green); border-color: var(--green); color: #fff; }
-    .btn.ghost { background: #fff; color: var(--muted); }
+    .btn.primary { background: var(--green); border-color: var(--green); color: #06230f; }
+    .btn.ghost { background: var(--card); color: var(--muted); }
     .modal-close { float: right; border: none; background: none; font-size: 22px; color: var(--muted);
       cursor: pointer; line-height: 1; }
 
-    .ctx { position: fixed; z-index: 60; background: #fff; border: 1px solid var(--border);
+    .ctx { position: fixed; z-index: 60; background: var(--card); border: 1px solid var(--border);
       border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.16); padding: 5px; display: none; }
     .ctx button { display: block; width: 100%; border: none; background: none; text-align: left;
       padding: 8px 14px; font-size: 13px; cursor: pointer; border-radius: 6px; color: var(--text); }
@@ -135,6 +158,15 @@
       <div class="hint">文章长难句 · 含上下文翻译与结构简析</div>
       <div id="sentList"></div>
     </div>
+    <div class="pager" id="pager" style="display:none;">
+      <div class="pager-inner">
+        <input type="range" id="pageSlider" class="pager-slider" min="1" max="1" value="1" step="1" aria-label="翻页进度条" />
+        <div class="pager-input">
+          <input id="pageInput" type="number" min="1" max="1" value="1" inputmode="numeric" />
+          <span id="pagerTotal">/ 1</span>
+        </div>
+      </div>
+    </div>
   </main>
 
   <div class="modal-mask" id="mask">
@@ -142,7 +174,7 @@
   </div>
   <div class="ctx" id="ctx">
     <button id="ctxUnarchive">移回学习中（未背）</button>
-    <button id="ctxDelete" style="color:#dc2626;">删除该单词</button>
+    <button id="ctxDelete" style="color:#f87171;">删除该单词</button>
   </div>
 
   <script src="data.js?v=1"></script>
@@ -163,6 +195,8 @@
     let mode = "memorize";
     let query = "";
     let ctxWord = null;
+    let page = 1;
+    const PAGE_SIZE = 30;
 
     function nowMs() { return Date.now(); }
 
@@ -263,8 +297,36 @@
       hint.textContent = mode === "memorize"
         ? "按学习时间顺序排列 · 灰色为已背单词（不可查看） · 点击卡片查看详情"
         : "已背单词 · 按星级从高到低排列，同星级按字母顺序 · 点击可查看或调整星级";
-      if (!list.length) { grid.innerHTML = '<div class="empty">这里还没有单词。</div>'; return; }
-      grid.innerHTML = list.map(v => cellHtml(v, mode === "memorize" && v.archived)).join("");
+      const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+      if (page < 1) page = 1;
+      if (page > totalPages) page = totalPages;
+      if (!list.length) {
+        grid.innerHTML = '<div class="empty">这里还没有单词。</div>';
+        setPagerVisible(false);
+        return;
+      }
+      setPagerVisible(true);
+      const start = (page - 1) * PAGE_SIZE;
+      grid.innerHTML = list.slice(start, start + PAGE_SIZE)
+        .map(v => cellHtml(v, mode === "memorize" && v.archived)).join("");
+      updatePager(page, totalPages);
+    }
+
+    function setPagerVisible(show) {
+      document.getElementById("pager").style.display = show ? "" : "none";
+    }
+
+    function updatePager(cur, total) {
+      const slider = document.getElementById("pageSlider");
+      const input = document.getElementById("pageInput");
+      const totalEl = document.getElementById("pagerTotal");
+      slider.max = total;
+      slider.value = cur;
+      const pct = total <= 1 ? 100 : ((cur - 1) / (total - 1)) * 100;
+      slider.style.background = "linear-gradient(to right, var(--accent) " + pct + "%, var(--border) " + pct + "%)";
+      input.max = total;
+      input.value = cur;
+      totalEl.textContent = "/ " + total;
     }
 
     function renderSearch() {
@@ -292,6 +354,7 @@
       document.getElementById("searchLayout").style.display = isSearch ? "" : "none";
       document.getElementById("simplePanel").style.display = (isSearch || isSent) ? "none" : "";
       document.getElementById("sentPanel").style.display = isSent ? "" : "none";
+      document.getElementById("pager").style.display = (isSearch || isSent) ? "none" : "";
       document.querySelectorAll(".tab").forEach(t =>
         t.classList.toggle("active", t.dataset.mode === mode));
       if (isSearch) renderSearch();
@@ -320,8 +383,9 @@
         <div class="head"><span class="mw">${v.word}</span><span class="mp">${v.phonetic}</span>
           <span class="tag">${v.pos}</span></div>
         ${v.phrase ? `<div class="phrase">📎 常用短语：<b>${v.phrase}</b></div>` : ""}
-        <h4>英文释义</h4><div class="en">${v.defEn}</div>
-        <h4>中文释义</h4><div>${v.meanings.join("；")}</div>
+        <h4>英文释义</h4><div class="en def-en">${v.defEn}</div>
+        <h4>中文释义 <button class="expand-btn" id="expandCn">展开</button></h4>
+        <div id="cnMeanings" style="display:none;">${v.meanings.join("；")}</div>
         <h4>用法</h4><div>${v.usage}</div>
         <h4>例句</h4><div class="en">${v.example}</div><div class="cn">${v.exampleCn}</div>
         <h4>词根词缀</h4>
@@ -342,6 +406,13 @@
       modal.dataset.word = word;
 
       document.getElementById("closeBtn").onclick = closeModal;
+      const cnBtn = document.getElementById("expandCn");
+      const cnBox = document.getElementById("cnMeanings");
+      if (cnBtn && cnBox) cnBtn.onclick = () => {
+        const hidden = cnBox.style.display === "none";
+        cnBox.style.display = hidden ? "" : "none";
+        cnBtn.textContent = hidden ? "收起" : "展开";
+      };
       modal.querySelectorAll(".star-picker button").forEach(b => b.onclick = () => {
         const n = +b.dataset.star;
         const cur = getSt(word).stars;
@@ -357,7 +428,7 @@
     }
 
     document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
-      mode = t.dataset.mode; render();
+      mode = t.dataset.mode; page = 1; render();
     }));
 
     document.getElementById("grid").addEventListener("click", e => {
@@ -381,6 +452,22 @@
     });
     document.getElementById("searchInput").addEventListener("input", e => {
       query = e.target.value; renderSearch();
+    });
+
+    document.getElementById("pageSlider").addEventListener("input", e => {
+      page = +e.target.value;
+      renderSimple();
+    });
+    document.getElementById("pageInput").addEventListener("change", e => {
+      const total = Math.max(1, Math.ceil(sortedVocab().length / PAGE_SIZE));
+      let v = parseInt(e.target.value, 10);
+      if (isNaN(v)) v = page;
+      v = Math.min(Math.max(1, v), total);
+      page = v;
+      renderSimple();
+    });
+    document.getElementById("pageInput").addEventListener("keydown", e => {
+      if (e.key === "Enter") e.target.blur();
     });
 
     // 检索模式右键：所有单词可删除；已背单词可改回未背
