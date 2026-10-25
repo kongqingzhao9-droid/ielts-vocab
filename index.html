@@ -24,6 +24,9 @@
       padding: 6px 14px; border-radius: 999px; cursor: pointer; font-size: 13px; }
     .tab.active { background: var(--accent); border-color: var(--accent); color: #10131a; font-weight: 600; }
     main { padding-top: 18px; }
+    #simplePanel, #sentPanel { touch-action: pan-y pinch-zoom; }
+    .page-ghost { position: fixed; pointer-events: none; z-index: 24; overflow: hidden;
+      background: var(--bg); box-shadow: 0 14px 32px rgba(0,0,0,.25); border-radius: 12px; }
 
     .hint { font-size: 12px; color: var(--muted); margin: 2px 0 12px; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
@@ -196,7 +199,58 @@
     let query = "";
     let ctxWord = null;
     let page = 1;
-    const PAGE_SIZE = 30;
+    const PAGE_SIZE = 27;
+    const SENTENCE_PAGE_SIZE = 10;
+    let pageAnimations = [];
+    let pageGhost = null;
+
+    function clearPageAnimation() {
+      pageAnimations.forEach(a => a.cancel());
+      pageAnimations = [];
+      if (pageGhost) pageGhost.remove();
+      pageGhost = null;
+    }
+
+    function totalPages() {
+      const count = mode === "sentences" ? DATA.sentences.length : sortedVocab().length;
+      return Math.max(1, Math.ceil(count / (mode === "sentences" ? SENTENCE_PAGE_SIZE : PAGE_SIZE)));
+    }
+
+    function goToPage(value) {
+      if (mode === "search") return;
+      const next = Math.min(totalPages(), Math.max(1, Math.trunc(Number(value)) || page));
+      if (next === page) { updatePager(page, totalPages()); return; }
+      clearPageAnimation();
+      const panel = document.getElementById(mode === "sentences" ? "sentList" : "grid");
+      const direction = next > page ? -1 : 1;
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!reduced && panel.animate) {
+        const rect = panel.getBoundingClientRect();
+        pageGhost = panel.cloneNode(true);
+        pageGhost.removeAttribute("id");
+        pageGhost.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
+        pageGhost.setAttribute("aria-hidden", "true");
+        pageGhost.classList.add("page-ghost");
+        Object.assign(pageGhost.style, { left: rect.left + "px", top: rect.top + "px",
+          width: rect.width + "px", height: rect.height + "px" });
+        document.body.appendChild(pageGhost);
+      }
+      page = next;
+      if (mode === "sentences") renderSentences(); else renderSimple();
+      window.scrollTo({ top: 0, behavior: "instant" });
+      if (pageGhost) {
+        const outgoing = pageGhost.animate([
+          { transform: "translateX(0) scale(1)", opacity: 1 },
+          { transform: `translateX(${direction * 90}px) scale(.96)`, opacity: 0 }
+        ], { duration: 240, easing: "ease-in", fill: "forwards" });
+        const incoming = panel.animate([
+          { transform: `translateX(${-direction * 24}px) scale(.96)`, opacity: .25 },
+          { transform: "translateX(0) scale(1)", opacity: 1 }
+        ], { duration: 300, easing: "cubic-bezier(.2,.7,.2,1)" });
+        pageAnimations = [outgoing, incoming];
+        incoming.onfinish = clearPageAnimation;
+      }
+    }
 
     function nowMs() { return Date.now(); }
 
@@ -348,13 +402,14 @@
     }
 
     function render() {
+      clearPageAnimation();
       const isSearch = mode === "search";
       const isSent = mode === "sentences";
       document.getElementById("searchBar").style.display = isSearch ? "" : "none";
       document.getElementById("searchLayout").style.display = isSearch ? "" : "none";
       document.getElementById("simplePanel").style.display = (isSearch || isSent) ? "none" : "";
       document.getElementById("sentPanel").style.display = isSent ? "" : "none";
-      document.getElementById("pager").style.display = (isSearch || isSent) ? "none" : "";
+      setPagerVisible(!isSearch);
       document.querySelectorAll(".tab").forEach(t =>
         t.classList.toggle("active", t.dataset.mode === mode));
       if (isSearch) renderSearch();
@@ -364,8 +419,15 @@
 
     function renderSentences() {
       const box = document.getElementById("sentList");
-      if (!DATA.sentences.length) { box.innerHTML = '<div class="empty">还没有长难句。</div>'; return; }
-      box.innerHTML = DATA.sentences.map(s => `
+      if (!DATA.sentences.length) {
+        box.innerHTML = '<div class="empty">还没有长难句。</div>';
+        setPagerVisible(false); return;
+      }
+      page = Math.min(Math.max(1, page), totalPages());
+      setPagerVisible(true);
+      updatePager(page, totalPages());
+      const start = (page - 1) * SENTENCE_PAGE_SIZE;
+      box.innerHTML = DATA.sentences.slice().reverse().slice(start, start + SENTENCE_PAGE_SIZE).map(s => `
         <div class="sent">
           <div class="orig">${s.original}</div>
           <div class="trans">📝 ${s.translation}</div>
@@ -455,20 +517,44 @@
     });
 
     document.getElementById("pageSlider").addEventListener("input", e => {
-      page = +e.target.value;
-      renderSimple();
+      goToPage(e.target.value);
     });
     document.getElementById("pageInput").addEventListener("change", e => {
-      const total = Math.max(1, Math.ceil(sortedVocab().length / PAGE_SIZE));
-      let v = parseInt(e.target.value, 10);
-      if (isNaN(v)) v = page;
-      v = Math.min(Math.max(1, v), total);
-      page = v;
-      renderSimple();
+      goToPage(e.target.value);
     });
     document.getElementById("pageInput").addEventListener("keydown", e => {
       if (e.key === "Enter") e.target.blur();
     });
+
+    let swipe = null;
+    let suppressClickUntil = 0;
+    const swipeBlocked = target => mode === "search" ||
+      document.getElementById("mask").classList.contains("show") ||
+      !!target.closest("input, button, a, textarea, select, #pager, #ctx, .modal-mask");
+    document.addEventListener("touchstart", e => {
+      swipe = null;
+      if (e.touches.length !== 1 || swipeBlocked(e.target)) return;
+      const t = e.touches[0];
+      swipe = { x: t.clientX, y: t.clientY, time: Date.now(), mode };
+    }, { passive: true });
+    document.addEventListener("touchmove", e => {
+      if (!swipe) return;
+      if (e.touches.length !== 1 || Math.abs(e.touches[0].clientY - swipe.y) > 35) swipe = null;
+    }, { passive: true });
+    document.addEventListener("touchcancel", () => { swipe = null; }, { passive: true });
+    document.addEventListener("touchend", e => {
+      const start = swipe;
+      swipe = null;
+      if (!start || !e.changedTouches.length || start.mode !== mode || swipeBlocked(e.target)) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - start.x, dy = t.clientY - start.y;
+      if (Date.now() - start.time > 900 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      suppressClickUntil = Date.now() + 400;
+      goToPage(page + (dx < 0 ? 1 : -1));
+    }, { passive: true });
+    document.addEventListener("click", e => {
+      if (Date.now() < suppressClickUntil) { e.preventDefault(); e.stopImmediatePropagation(); }
+    }, true);
 
     // 检索模式右键：所有单词可删除；已背单词可改回未背
     document.getElementById("searchMain").addEventListener("contextmenu", e => {
