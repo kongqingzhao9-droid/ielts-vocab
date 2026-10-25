@@ -67,6 +67,7 @@
     .cell.archived .w { color: #6b7280; }
     .cell.archived:hover { transform: none; box-shadow: var(--shadow); }
     .cell.locked { cursor: not-allowed; }
+    #grid .cell, #searchMain .cell { -webkit-touch-callout: none; -webkit-user-select: none; }
 
     .search-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; position: sticky;
       top: 64px; background: var(--bg); padding: 8px 0; z-index: 20; }
@@ -229,6 +230,7 @@
     let sentencePageSize = 1;
     let focusedWord = null;
     let focusedSentence = null;
+    const modePositions = {};
     let pageAnimations = [];
     let pageGhost = null;
 
@@ -272,6 +274,8 @@
 
     function goToPage(value) {
       if (mode === "search") return;
+      cancelLongPress();
+      hideWordMenu();
       const next = Math.min(totalPages(), Math.max(1, Math.trunc(Number(value)) || page));
       if (next === page) { updatePager(page, totalPages()); return; }
       clearPageAnimation();
@@ -457,6 +461,7 @@
     }
 
     function render() {
+      cancelLongPress();
       clearPageAnimation();
       const isSearch = mode === "search";
       const isSent = mode === "sentences";
@@ -566,7 +571,23 @@
     }
 
     document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
-      mode = t.dataset.mode; page = 1; focusedWord = null; focusedSentence = null;
+      if (mode === t.dataset.mode) return;
+      if (mode !== "search") {
+        const isSent = mode === "sentences";
+        const size = isSent ? sentencePageSize : wordPageSize;
+        const list = isSent ? DATA.sentences.slice().reverse() : sortedVocab();
+        const first = list[(page - 1) * size];
+        modePositions[mode] = { page, size, anchor: first ? (isSent ? first.id : first.word) : null };
+      }
+      hideWordMenu();
+      mode = t.dataset.mode;
+      const saved = modePositions[mode];
+      page = saved ? saved.page : 1;
+      focusedWord = null; focusedSentence = null;
+      if (saved) {
+        if (mode === "sentences") { sentencePageSize = saved.size; focusedSentence = saved.anchor; }
+        else { wordPageSize = saved.size; focusedWord = saved.anchor; }
+      }
       window.scrollTo(0, 0); render();
     }));
 
@@ -609,23 +630,77 @@
 
     let swipe = null;
     let suppressClickUntil = 0;
+    let longPress = null;
+    let longPressTimer = null;
+    let longPressOpened = false;
+    function cancelLongPress() {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+      longPress = null;
+    }
+    function hideWordMenu() {
+      document.getElementById("ctx").style.display = "none";
+      ctxWord = null;
+    }
+    function menuCell(target) {
+      if (mode !== "search" && mode !== "memorize") return null;
+      const cell = target.closest(mode === "search" ? "#searchMain .cell" : "#grid .cell");
+      return cell && !document.getElementById("mask").classList.contains("show") ? cell : null;
+    }
+    function showWordMenu(cell, x, y) {
+      ctxWord = cell.dataset.word;
+      document.getElementById("ctxUnarchive").style.display = getSt(ctxWord).archived ? "" : "none";
+      const ctx = document.getElementById("ctx");
+      ctx.style.display = "block";
+      const rect = ctx.getBoundingClientRect();
+      ctx.style.left = Math.max(8, Math.min(x, window.innerWidth - rect.width - 8)) + "px";
+      ctx.style.top = Math.max(8, Math.min(y, window.innerHeight - rect.height - 8)) + "px";
+    }
     const swipeBlocked = target => mode === "search" ||
       document.getElementById("mask").classList.contains("show") ||
       !!target.closest("input, button:not(.sent-preview), a, textarea, select, #pager, #ctx, .modal-mask");
     document.addEventListener("touchstart", e => {
+      cancelLongPress();
+      longPressOpened = false;
       swipe = null;
+      if (e.touches.length === 1) {
+        const cell = menuCell(e.target);
+        if (cell) {
+          const { clientX: x, clientY: y } = e.touches[0];
+          longPress = { x, y };
+          longPressTimer = setTimeout(() => {
+            cancelLongPress();
+            swipe = null;
+            longPressOpened = true;
+            showWordMenu(cell, x, y);
+          }, 500);
+        }
+      }
       if (e.touches.length !== 1 || swipeBlocked(e.target)) return;
       const t = e.touches[0];
       swipe = { x: t.clientX, y: t.clientY, time: Date.now(), mode, axis: null };
     }, { passive: true });
     document.addEventListener("touchmove", e => {
+      if (longPress && (e.touches.length !== 1 ||
+        Math.hypot(e.touches[0].clientX - longPress.x, e.touches[0].clientY - longPress.y) > 10)) cancelLongPress();
       if (!swipe) return;
       if (e.touches.length !== 1) { swipe = null; return; }
       const dx = Math.abs(e.touches[0].clientX - swipe.x), dy = Math.abs(e.touches[0].clientY - swipe.y);
       if (!swipe.axis && Math.max(dx, dy) > 12) swipe.axis = dx > dy * 1.3 ? "x" : "y";
     }, { passive: true });
-    document.addEventListener("touchcancel", () => { swipe = null; }, { passive: true });
+    document.addEventListener("touchcancel", () => {
+      cancelLongPress(); swipe = null;
+      if (longPressOpened) suppressClickUntil = Date.now() + 400;
+      longPressOpened = false;
+    }, { passive: true });
     document.addEventListener("touchend", e => {
+      cancelLongPress();
+      if (longPressOpened) {
+        suppressClickUntil = Date.now() + 400;
+        longPressOpened = false;
+        swipe = null;
+        return;
+      }
       const start = swipe;
       swipe = null;
       if (!start || start.axis === "y" || !e.changedTouches.length || start.mode !== mode || swipeBlocked(e.target)) return;
@@ -636,22 +711,17 @@
       goToPage(page + (dx < 0 ? 1 : -1));
     }, { passive: true });
     document.addEventListener("click", e => {
-      if (Date.now() < suppressClickUntil) { e.preventDefault(); e.stopImmediatePropagation(); }
+      if (Date.now() < suppressClickUntil && !e.target.closest("#ctx")) { e.preventDefault(); e.stopImmediatePropagation(); }
     }, true);
 
-    // 检索模式右键：所有单词可删除；已背单词可改回未背
-    document.getElementById("searchMain").addEventListener("contextmenu", e => {
-      const cell = e.target.closest(".cell");
+    // 记忆和检索模式：触屏长按或电脑右键。
+    document.addEventListener("contextmenu", e => {
+      const cell = menuCell(e.target);
       if (!cell) return;
-      const word = cell.dataset.word;
-      const v = withState(DATA.vocab.find(x => x.word === word));
       e.preventDefault();
-      ctxWord = word;
-      document.getElementById("ctxUnarchive").style.display = v.archived ? "" : "none";
-      const ctx = document.getElementById("ctx");
-      ctx.style.display = "block";
-      ctx.style.left = Math.min(e.clientX, window.innerWidth - 140) + "px";
-      ctx.style.top = Math.min(e.clientY, window.innerHeight - 80) + "px";
+      cancelLongPress(); swipe = null;
+      if (e.pointerType === "touch" || longPressOpened) longPressOpened = true;
+      showWordMenu(cell, e.clientX, e.clientY);
     });
     document.getElementById("ctxUnarchive").onclick = () => {
       if (ctxWord) { commit(ctxWord, { archived: false }); ctxWord = null; }
@@ -667,14 +737,17 @@
       render();
     };
     document.addEventListener("click", e => {
-      if (!e.target.closest("#ctx")) document.getElementById("ctx").style.display = "none";
+      if (!e.target.closest("#ctx")) hideWordMenu();
     });
+    document.addEventListener("scroll", () => { cancelLongPress(); hideWordMenu(); }, { passive: true, capture: true });
+    window.addEventListener("blur", () => { cancelLongPress(); hideWordMenu(); });
     document.getElementById("mask").addEventListener("click", e => {
       if (e.target === e.currentTarget) closeModal();
     });
 
     let resizeFrame = 0;
     function scheduleFit() {
+      cancelLongPress(); hideWordMenu();
       cancelAnimationFrame(resizeFrame);
       resizeFrame = requestAnimationFrame(() => {
         if (mode !== "search") render();
