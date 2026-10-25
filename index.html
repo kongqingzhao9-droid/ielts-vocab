@@ -24,7 +24,32 @@
       padding: 6px 14px; border-radius: 999px; cursor: pointer; font-size: 13px; }
     .tab.active { background: var(--accent); border-color: var(--accent); color: #10131a; font-weight: 600; }
     main { padding-top: 18px; }
-    #simplePanel, #sentPanel { touch-action: pan-y pinch-zoom; }
+    html.paged, body.paged { overflow: hidden; overscroll-behavior: none; }
+    body.paged { height: 100vh; height: 100dvh; padding-bottom: 0; display: flex; flex-direction: column; }
+    body.paged header { flex-shrink: 0; }
+    body.paged main { width: 100%; flex: 1; min-height: 0; display: flex; flex-direction: column;
+      padding-top: 12px; padding-bottom: calc(var(--pager-height, 64px) + 12px); }
+    #simplePanel, #sentPanel { touch-action: pinch-zoom; }
+    body.paged #simplePanel, body.paged #sentPanel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    body.paged .hint { flex-shrink: 0; }
+    #grid, #sentList { flex: 1; min-height: 0; }
+    body.paged .word-page { grid-template-columns: repeat(var(--word-columns, 3), minmax(0, 1fr));
+      grid-template-rows: repeat(var(--word-rows, 1), minmax(0, 1fr)); }
+    .word-page .cell { min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
+    .word-page .w { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+    .sentence-page { display: grid; gap: 10px; grid-auto-rows: 112px; align-content: start; }
+    .sent-preview { position: relative; height: 112px; min-width: 0; overflow: hidden;
+      background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 14px;
+      padding: 16px 20px; text-align: left; font: inherit; cursor: pointer; box-shadow: var(--shadow); }
+    .sent-preview .orig { font-size: 15px; font-weight: 600; line-height: 1.55; max-height: 69.75px; overflow: hidden; }
+    .sent-preview.truncated .orig { -webkit-mask-image: linear-gradient(#000 55%, transparent);
+      mask-image: linear-gradient(#000 55%, transparent); }
+    .sent-preview.truncated::after { content: ""; position: absolute; left: 20px; right: 20px;
+      bottom: 24px; height: 20px; backdrop-filter: blur(1.5px); pointer-events: none;
+      -webkit-mask-image: linear-gradient(transparent, #000); mask-image: linear-gradient(transparent, #000); }
+    .sent-preview:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+    .modal { overscroll-behavior: contain; touch-action: pan-y pinch-zoom; }
+    .modal .sent { padding: 0; margin: 0; border: 0; box-shadow: none; }
     .page-ghost { position: fixed; pointer-events: none; z-index: 24; overflow: hidden;
       background: var(--bg); box-shadow: 0 14px 32px rgba(0,0,0,.25); border-radius: 12px; }
 
@@ -63,7 +88,7 @@
 
     .pager { position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
       background: var(--card); border-top: 1px solid var(--border);
-      padding: 10px 20px; box-shadow: 0 -3px 12px rgba(0,0,0,.35); }
+      padding: 10px 20px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -3px 12px rgba(0,0,0,.35); }
     .pager-inner { max-width: 1180px; margin: 0 auto; display: flex; align-items: center; gap: 14px; }
     .pager-slider { flex: 1; -webkit-appearance: none; appearance: none; height: 6px;
       border-radius: 999px; background: var(--border); outline: none; cursor: pointer; }
@@ -130,6 +155,7 @@
       padding: 8px 14px; font-size: 13px; cursor: pointer; border-radius: 6px; color: var(--text); }
     .ctx button:hover { background: var(--accent-soft); }
     @media (max-width: 560px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 380px) { .tab { padding: 6px 10px; } nav { gap: 4px; } }
   </style>
 </head>
 <body>
@@ -155,11 +181,11 @@
     </div>
     <div id="simplePanel">
       <div class="hint" id="modeHint"></div>
-      <div class="grid" id="grid"></div>
+      <div class="grid word-page" id="grid"></div>
     </div>
     <div id="sentPanel" style="display:none;">
-      <div class="hint">文章长难句 · 含上下文翻译与结构简析</div>
-      <div id="sentList"></div>
+      <div class="hint">最新收录在前 · 点击句子查看全文、翻译与解析</div>
+      <div id="sentList" class="sentence-page"></div>
     </div>
     <div class="pager" id="pager" style="display:none;">
       <div class="pager-inner">
@@ -199,8 +225,10 @@
     let query = "";
     let ctxWord = null;
     let page = 1;
-    const PAGE_SIZE = 27;
-    const SENTENCE_PAGE_SIZE = 10;
+    let wordPageSize = 27;
+    let sentencePageSize = 1;
+    let focusedWord = null;
+    let focusedSentence = null;
     let pageAnimations = [];
     let pageGhost = null;
 
@@ -213,7 +241,33 @@
 
     function totalPages() {
       const count = mode === "sentences" ? DATA.sentences.length : sortedVocab().length;
-      return Math.max(1, Math.ceil(count / (mode === "sentences" ? SENTENCE_PAGE_SIZE : PAGE_SIZE)));
+      return Math.max(1, Math.ceil(count / (mode === "sentences" ? sentencePageSize : wordPageSize)));
+    }
+
+    function fitPage(preservePosition = true) {
+      if (mode === "search") return;
+      const isSent = mode === "sentences";
+      const list = isSent ? DATA.sentences.slice().reverse() : sortedVocab();
+      const oldSize = isSent ? sentencePageSize : wordPageSize;
+      const focused = isSent ? focusedSentence : focusedWord;
+      let anchor = preservePosition && focused != null
+        ? list.findIndex(v => (isSent ? v.id : v.word) === focused) : -1;
+      if (anchor < 0) anchor = (page - 1) * oldSize;
+      const pager = document.getElementById("pager");
+      document.body.style.setProperty("--pager-height", (pager.getBoundingClientRect().height || 60) + "px");
+      const box = document.getElementById(isSent ? "sentList" : "grid");
+      const { width, height } = box.getBoundingClientRect();
+      if (isSent) sentencePageSize = Math.max(1, Math.floor((height + 10) / 122));
+      else {
+        const columns = Math.max(1, Math.floor((width + 10) / (window.innerWidth <= 560 ? 100 : 128)));
+        const rows = Math.max(1, Math.floor((height + 10) / 86));
+        wordPageSize = columns * rows;
+        box.style.setProperty("--word-columns", columns);
+        box.style.setProperty("--word-rows", rows);
+      }
+      const size = isSent ? sentencePageSize : wordPageSize;
+      if (preservePosition) page = Math.floor(anchor / size) + 1;
+      page = Math.min(Math.max(1, page), totalPages());
     }
 
     function goToPage(value) {
@@ -236,6 +290,7 @@
         document.body.appendChild(pageGhost);
       }
       page = next;
+      focusedWord = null; focusedSentence = null;
       if (mode === "sentences") renderSentences(); else renderSimple();
       window.scrollTo({ top: 0, behavior: "instant" });
       if (pageGhost) {
@@ -351,7 +406,7 @@
       hint.textContent = mode === "memorize"
         ? "按学习时间顺序排列 · 灰色为已背单词（不可查看） · 点击卡片查看详情"
         : "已背单词 · 按星级从高到低排列，同星级按字母顺序 · 点击可查看或调整星级";
-      const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+      const totalPages = Math.max(1, Math.ceil(list.length / wordPageSize));
       if (page < 1) page = 1;
       if (page > totalPages) page = totalPages;
       if (!list.length) {
@@ -360,8 +415,8 @@
         return;
       }
       setPagerVisible(true);
-      const start = (page - 1) * PAGE_SIZE;
-      grid.innerHTML = list.slice(start, start + PAGE_SIZE)
+      const start = (page - 1) * wordPageSize;
+      grid.innerHTML = list.slice(start, start + wordPageSize)
         .map(v => cellHtml(v, mode === "memorize" && v.archived)).join("");
       updatePager(page, totalPages);
     }
@@ -405,11 +460,14 @@
       clearPageAnimation();
       const isSearch = mode === "search";
       const isSent = mode === "sentences";
+      document.documentElement.classList.toggle("paged", !isSearch);
+      document.body.classList.toggle("paged", !isSearch);
       document.getElementById("searchBar").style.display = isSearch ? "" : "none";
       document.getElementById("searchLayout").style.display = isSearch ? "" : "none";
       document.getElementById("simplePanel").style.display = (isSearch || isSent) ? "none" : "";
       document.getElementById("sentPanel").style.display = isSent ? "" : "none";
       setPagerVisible(!isSearch);
+      fitPage();
       document.querySelectorAll(".tab").forEach(t =>
         t.classList.toggle("active", t.dataset.mode === mode));
       if (isSearch) renderSearch();
@@ -426,18 +484,35 @@
       page = Math.min(Math.max(1, page), totalPages());
       setPagerVisible(true);
       updatePager(page, totalPages());
-      const start = (page - 1) * SENTENCE_PAGE_SIZE;
-      box.innerHTML = DATA.sentences.slice().reverse().slice(start, start + SENTENCE_PAGE_SIZE).map(s => `
-        <div class="sent">
+      const start = (page - 1) * sentencePageSize;
+      box.innerHTML = DATA.sentences.slice().reverse().slice(start, start + sentencePageSize).map(s => `
+        <button class="sent-preview" data-sentence="${s.id}" aria-label="查看长难句全文、翻译与解析">
           <div class="orig">${s.original}</div>
-          <div class="trans">📝 ${s.translation}</div>
-          <h4>结构简析</h4>
-          <div class="main">${s.main}</div>
-          <ul>${s.clauses.map(c => `<li>${c}</li>`).join("")}</ul>
-        </div>`).join("");
+        </button>`).join("");
+      box.querySelectorAll(".sent-preview").forEach(card => {
+        const text = card.querySelector(".orig");
+        card.classList.toggle("truncated", text.scrollHeight > text.clientHeight + 1);
+      });
+    }
+
+    function openSentence(id) {
+      const s = DATA.sentences.find(item => String(item.id) === String(id));
+      if (!s) return;
+      focusedSentence = s.id;
+      const modal = document.getElementById("modal");
+      delete modal.dataset.word;
+      modal.innerHTML = `<button class="modal-close" id="closeBtn" aria-label="关闭">×</button>
+        <div class="sent"><h4>长难句原文</h4><div class="orig">${s.original}</div>
+        <h4>中文翻译</h4><div class="trans">${s.translation}</div>
+        <h4>结构简析</h4><div class="main">${s.main}</div>
+        <ul>${s.clauses.map(c => `<li>${c}</li>`).join("")}</ul></div>`;
+      document.getElementById("mask").classList.add("show");
+      modal.scrollTop = 0;
+      document.getElementById("closeBtn").onclick = closeModal;
     }
 
     function openModal(word) {
+      focusedWord = word;
       const v = withState(DATA.vocab.find(x => x.word === word));
       const modal = document.getElementById("modal");
       modal.innerHTML = `
@@ -465,6 +540,7 @@
           ? `<div class="actions"><button class="btn primary" id="actDone">归档到已背</button></div>`
           : ""}`;
       document.getElementById("mask").classList.add("show");
+      modal.scrollTop = 0;
       modal.dataset.word = word;
 
       document.getElementById("closeBtn").onclick = closeModal;
@@ -490,7 +566,8 @@
     }
 
     document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
-      mode = t.dataset.mode; page = 1; render();
+      mode = t.dataset.mode; page = 1; focusedWord = null; focusedSentence = null;
+      window.scrollTo(0, 0); render();
     }));
 
     document.getElementById("grid").addEventListener("click", e => {
@@ -500,6 +577,10 @@
       const v = withState(DATA.vocab.find(x => x.word === word));
       if (mode === "memorize" && v.archived) return;   // 已背不可查看
       openModal(word);
+    });
+    document.getElementById("sentList").addEventListener("click", e => {
+      const card = e.target.closest(".sent-preview");
+      if (card) openSentence(card.dataset.sentence);
     });
 
     document.getElementById("searchMain").addEventListener("click", e => {
@@ -530,22 +611,24 @@
     let suppressClickUntil = 0;
     const swipeBlocked = target => mode === "search" ||
       document.getElementById("mask").classList.contains("show") ||
-      !!target.closest("input, button, a, textarea, select, #pager, #ctx, .modal-mask");
+      !!target.closest("input, button:not(.sent-preview), a, textarea, select, #pager, #ctx, .modal-mask");
     document.addEventListener("touchstart", e => {
       swipe = null;
       if (e.touches.length !== 1 || swipeBlocked(e.target)) return;
       const t = e.touches[0];
-      swipe = { x: t.clientX, y: t.clientY, time: Date.now(), mode };
+      swipe = { x: t.clientX, y: t.clientY, time: Date.now(), mode, axis: null };
     }, { passive: true });
     document.addEventListener("touchmove", e => {
       if (!swipe) return;
-      if (e.touches.length !== 1 || Math.abs(e.touches[0].clientY - swipe.y) > 35) swipe = null;
+      if (e.touches.length !== 1) { swipe = null; return; }
+      const dx = Math.abs(e.touches[0].clientX - swipe.x), dy = Math.abs(e.touches[0].clientY - swipe.y);
+      if (!swipe.axis && Math.max(dx, dy) > 12) swipe.axis = dx > dy * 1.3 ? "x" : "y";
     }, { passive: true });
     document.addEventListener("touchcancel", () => { swipe = null; }, { passive: true });
     document.addEventListener("touchend", e => {
       const start = swipe;
       swipe = null;
-      if (!start || !e.changedTouches.length || start.mode !== mode || swipeBlocked(e.target)) return;
+      if (!start || start.axis === "y" || !e.changedTouches.length || start.mode !== mode || swipeBlocked(e.target)) return;
       const t = e.changedTouches[0];
       const dx = t.clientX - start.x, dy = t.clientY - start.y;
       if (Date.now() - start.time > 900 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
@@ -590,6 +673,20 @@
       if (e.target === e.currentTarget) closeModal();
     });
 
+    let resizeFrame = 0;
+    function scheduleFit() {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => {
+        if (mode !== "search") render();
+      });
+    }
+    window.addEventListener("resize", scheduleFit);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", scheduleFit);
+    const layoutObserver = new ResizeObserver(scheduleFit);
+    layoutObserver.observe(document.querySelector("main"));
+    layoutObserver.observe(document.querySelector("header"));
+    layoutObserver.observe(document.getElementById("pager"));
+    document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
     render();
     initSync();
   </script>
