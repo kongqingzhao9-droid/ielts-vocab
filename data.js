@@ -3111,7 +3111,17 @@ window.IELTS_DATA = {
       prefix: "agri-（田地，田野）", root: "cult（耕作，培育）", suffix: "-ure（名词后缀，表行为或结果）",
       synonyms: ["farming", "cultivation", "husbandry"],
       derivatives: ["agricultural adj. 农业的", "agriculturist n. 农学家"],
-      phrase: null, stars: 0, archived: false, order: 311 }
+      phrase: null, stars: 0, archived: false, order: 311 },
+    { word: "construed", phonetic: "/kənˈstruːd/", pos: "v.",
+      defEn: "interpreted a statement or action in a particular way",
+      meanings: ["理解，解释（construe 的过去式和过去分词）"],
+      usage: "construe sth as sth：把某事理解为……；常用于被动结构 be construed as，尤其指对言语、行为或意图的理解。",
+      example: "Her silence should not be construed as agreement.",
+      exampleCn: "不应把她的沉默理解为同意。",
+      prefix: "con-（共同、一起）", root: "stru（源自拉丁语 struere，建造、排列；引申为组织并理解语义）", suffix: "-ed（过去式和过去分词；construe 以 e 结尾，只加 -d）",
+      synonyms: ["interpret", "understand", "read"],
+      derivatives: ["construe v. 理解，解释", "misconstrue v. 误解", "construal n. 理解方式，解释"],
+      phrase: "be construed as（被理解为……）", stars: 0, archived: false, order: 312 },
   ],
   sentences: [
     {
